@@ -1,0 +1,3 @@
+(executable
+  (name main)
+  (libraries fstream lwt lwt.unix logs logs.lwt))

@@ -1,0 +1,5 @@
+(library
+  (flags
+    (:standard -bin-annot))
+  (libraries lwt lwt.unix logs logs.lwt)
+  (name fstream))
