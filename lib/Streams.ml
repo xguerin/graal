@@ -17,6 +17,8 @@ module Mailbox (E: Environment) (T: Tuple)
     ; wake_get = None
     }
 
+  let name () = E.name ()
+
   let put state value =
     match state with
     (* Streams with no pre-existing value *)

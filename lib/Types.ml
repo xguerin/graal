@@ -21,6 +21,7 @@ module type Stream = sig
   type data
   type t
   val init: unit -> t
+  val name: unit -> string
   val put: t -> data output
   val get: t -> data input
 end
@@ -30,5 +31,6 @@ module type Operator = sig
   type inputs
   type outputs
   val init: unit -> state
+  val name: unit -> string
   val process: state -> inputs -> outputs -> unit -> unit Lwt.t
 end

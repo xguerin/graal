@@ -23,6 +23,7 @@ module Beacon = struct
     type outputs = O.t
 
     let init () = T.zero ()
+    let name () = E.name ()
 
     let rec process state inputs outputs () =
       inputs ()
@@ -46,6 +47,7 @@ module Functor = struct
     type outputs = O.t
 
     let init () = ()
+    let name () = E.name ()
 
     let rec process state inputs outputs () =
       I.get inputs ()
@@ -68,6 +70,7 @@ module Merger = struct
     type outputs = O.t
 
     let init () = ()
+    let name () = E.name ()
 
     let rec process state (i0, i1) o0 () =
       I0.get i0 ()
@@ -91,6 +94,7 @@ module Splitter = struct
     type outputs = O0.t * O1.t
 
     let init () = ()
+    let name () = E.name ()
 
     let rec process state i0 (o0, o1) () =
       I.get i0 ()
@@ -113,6 +117,7 @@ module Sink = struct
     type outputs = unit output
 
     let init () = ()
+    let name () = E.name ()
 
     let rec process state inputs outputs () =
       I.get inputs ()
@@ -142,6 +147,7 @@ module Scatter = struct
     type outputs = O.t array
 
     let init () = ref 0
+    let name () = E.name ()
 
     let broadcast _ outputs value =
       Array.to_list outputs
@@ -178,6 +184,7 @@ module Gather = struct
     type outputs = O.t
 
     let init () = ()
+    let name () = E.name ()
 
     let forward input output () =
       I.get input () >>= O.put output
