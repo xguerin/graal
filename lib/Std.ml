@@ -18,19 +18,26 @@ module Beacon = struct
       (O: Stream with type data = T.t)
     : Operator with type inputs = unit input and type outputs = O.t
   = struct
-    type state = T.t
+    type t =
+      { label: string
+      ; state: T.t
+      }
     type inputs = unit input
     type outputs = O.t
 
-    let init () = T.zero ()
-    let name () = E.name ()
+    let init ?label () =
+      { label = (match label with Some (label) -> label | None -> "Beacon")
+      ; state = T.zero ()
+      }
 
-    let rec process state inputs outputs () =
+    let label { label; _ } = label
+
+    let rec process ({ label; state } as t) inputs outputs () =
       inputs ()
       >>= fun () -> Lwt_unix.sleep 1.0
-      >>= fun () -> Logs_lwt.info (fun m -> m "[%s] Sending %s" (E.name ()) (T.to_string state))
+      >>= fun () -> Logs_lwt.info (fun m -> m "[%s] Sending %s" label (T.to_string state))
       >>= fun () -> O.put outputs state
-      >>= fun () -> process (T.next state) inputs outputs |> E.apply
+      >>= fun () -> process { t with state = (T.next state) } inputs outputs |> E.apply
   end
 end
 
@@ -42,18 +49,23 @@ module Functor = struct
       (O: Stream with type data = T.t)
     : Operator with type inputs = I.t and type outputs = O.t
   = struct
-    type state = unit
+    type t =
+      { label: string
+      }
     type inputs = I.t
     type outputs = O.t
 
-    let init () = ()
-    let name () = E.name ()
+    let init ?label () =
+      { label = (match label with Some (label) -> label | None -> "Functor")
+      }
 
-    let rec process state inputs outputs () =
+    let label { label } = label
+
+    let rec process ({ label } as t) inputs outputs () =
       I.get inputs ()
-      >>= fun v -> Logs_lwt.debug (fun m -> m "[%s] Passing through: %s !" (E.name ()) (T.to_string v))
+      >>= fun v -> Logs_lwt.debug (fun m -> m "[%s] Passing through: %s !" label (T.to_string v))
       >>= fun () -> O.put outputs v
-      >>= fun () -> process state inputs outputs |> E.apply
+      >>= fun () -> process t inputs outputs |> E.apply
   end
 end
 
@@ -65,19 +77,24 @@ module Merger = struct
       (O: Stream with type data = T2.t)
     : Operator with type inputs = I0.t * I1.t and type outputs = O.t
   = struct
-    type state = unit
+    type t =
+      { label : string
+      }
     type inputs = I0.t * I1.t
     type outputs = O.t
 
-    let init () = ()
-    let name () = E.name ()
+    let init ?label () =
+      { label = (match label with Some (label) -> label | None -> "Merger")
+      }
 
-    let rec process state (i0, i1) o0 () =
+    let label { label } = label
+
+    let rec process ({ label } as t) (i0, i1) o0 () =
       I0.get i0 ()
       >>= fun v0 -> I1.get i1 ()
-      >>= fun v1 -> Logs_lwt.info (fun m -> m "[%s] Merging i0 = %s, i1 = %s" (E.name ()) (T0.to_string v0) (T1.to_string v1))
+      >>= fun v1 -> Logs_lwt.info (fun m -> m "[%s] Merging i0 = %s, i1 = %s" label (T0.to_string v0) (T1.to_string v1))
       >>= fun () -> O.put o0 (v0, v1)
-      >>= fun () -> process state (i0, i1) o0 |> E.apply
+      >>= fun () -> process t (i0, i1) o0 |> E.apply
   end
 end
 
@@ -89,19 +106,24 @@ module Splitter = struct
       (O0: Stream with type data = T0.t) (O1: Stream with type data = T1.t)
     : Operator with type inputs = I.t and type outputs = O0.t * O1.t
   = struct
-    type state = unit
+    type t =
+      { label: string
+      }
     type inputs = I.t
     type outputs = O0.t * O1.t
 
-    let init () = ()
-    let name () = E.name ()
+    let init ?label () =
+      { label = (match label with Some (label) -> label | None -> "Splitter")
+      }
 
-    let rec process state i0 (o0, o1) () =
+    let label { label } = label
+
+    let rec process ({ label} as t) i0 (o0, o1) () =
       I.get i0 ()
-      >>= fun (v0, v1) -> Logs_lwt.info (fun m -> m "[%s] Splitting (%s, %s)" (E.name ()) (T0.to_string v0) (T1.to_string v1))
+      >>= fun (v0, v1) -> Logs_lwt.info (fun m -> m "[%s] Splitting (%s, %s)" label (T0.to_string v0) (T1.to_string v1))
       >>= fun () -> O0.put o0 v0
       >>= fun () -> O1.put o1 v1
-      >>= fun () -> process state i0 (o0, o1) |> E.apply
+      >>= fun () -> process t i0 (o0, o1) |> E.apply
   end
 end
 
@@ -112,18 +134,23 @@ module Sink = struct
       (I: Stream with type data = T.t)
     : Operator with type inputs = I.t and type outputs = unit output
   = struct
-    type state = unit
+    type t =
+      { label: string
+      }
     type inputs = I.t
     type outputs = unit output
 
-    let init () = ()
-    let name () = E.name ()
+    let init ?label () =
+      { label = (match label with Some (label) -> label | None -> "Sink")
+      }
 
-    let rec process state inputs outputs () =
+    let label { label } = label
+
+    let rec process ({ label } as t) inputs outputs () =
       I.get inputs ()
-      >>= fun v -> Logs_lwt.info (fun m -> m "[%s] Consuming %s" (E.name ()) (T.to_string v))
+      >>= fun v -> Logs_lwt.info (fun m -> m "[%s] Consuming %s" label (T.to_string v))
       >>= fun () -> outputs ()
-      >>= fun () -> process state inputs outputs |> E.apply
+      >>= fun () -> process t inputs outputs |> E.apply
   end
 end
 
@@ -142,22 +169,31 @@ module Scatter = struct
       (O: Stream with type data = T.t)
     : Operator with type inputs = I.t and type outputs = O.t array
   = struct
-    type state = int ref
+    type t =
+      { label: string
+      ; index: int
+      }
     type inputs = I.t
     type outputs = O.t array
 
-    let init () = ref 0
-    let name () = E.name ()
+    let init ?label () =
+      { label = (match label with Some (label) -> label | None -> "Scatter")
+      ; index = 0
+      }
 
-    let broadcast _ outputs value =
+    let label { label; _ } = label
+
+    let broadcast state outputs value =
       Array.to_list outputs
       |> Lwt_list.fold_left_s (fun _ output -> O.put output value) ()
+      >>= fun () -> Lwt.return state
 
-    let sequential state outputs value =
-      let index = !state mod (Array.length outputs) in
+    let sequential ({ label; index } as t) outputs value =
+      let index = index mod (Array.length outputs) in
       let output = Array.get outputs index in
-      Logs_lwt.info (fun m -> m "[%s] Scatter to output %d" (E.name ()) index)
-      >>= fun () -> state := !state + 1; O.put output value
+      Logs_lwt.info (fun m -> m "[%s] Scatter to output %d" label index)
+      >>= fun () -> O.put output value
+      >>= fun () -> Lwt.return { t with index }
 
     let run_policy state outputs value =
       match E.policy () with
@@ -167,7 +203,7 @@ module Scatter = struct
     let rec process state inputs outputs () =
       I.get inputs ()
       >>= run_policy state outputs
-      >>= fun () -> process state inputs outputs |> E.apply
+      >>= fun state -> process state inputs outputs |> E.apply
   end
 end
 
@@ -179,19 +215,24 @@ module Gather = struct
       (O: Stream with type data = T.t)
     : Operator with type inputs = I.t array and type outputs = O.t
   = struct
-    type state = unit
+    type t =
+      { label: string
+      }
     type inputs = I.t array
     type outputs = O.t
 
-    let init () = ()
-    let name () = E.name ()
+    let init ?label () =
+      { label = (match label with Some (label) -> label | None -> "Gather")
+      }
+
+    let label { label } = label
 
     let forward input output () =
       I.get input () >>= O.put output
 
-    let rec process (state : unit) (inputs : inputs) (outputs : outputs) () =
+    let rec process t inputs outputs () =
       Array.to_list inputs
       |> Lwt_list.fold_left_s (fun _ input -> forward input outputs |> E.apply) ()
-      >>= fun () -> process state inputs outputs |> E.apply
+      >>= fun () -> process t inputs outputs |> E.apply
   end
 end
