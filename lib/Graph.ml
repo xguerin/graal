@@ -15,28 +15,63 @@ end
 
 module Algebra (T: OrderedType) = struct
   type t =
+    | Empty
     | Vertex of T.t
     | Connect of t * t
     | Overlay of t * t
 
-  let vertex v = Vertex v
-  let connect a b = Connect (a, b)
-  let overlay a b = Overlay (a, b)
+  (*
+   * Vertex constructor operation.
+   *)
 
-  let ( +> ) a b = Overlay (a, b)
-  let ( *> ) a b = Connect (a, b)
+  let vertex v = Vertex v
+
+  (*
+   * Connecting to nothing gets you nothing. The 0 operation is communitative.
+   *)
+
+  let connect a b =
+    match a, b with
+    | Empty, _ | _, Empty -> Empty
+    | a, b -> Connect (a, b)
+
+  (*
+   * Empty is the identity element for Overlay.
+   *)
+
+  let overlay a b =
+    match a, b with
+    | Empty, a | a, Empty -> a
+    | a, b -> Overlay (a, b)
+
+  (*
+   * Infix operators.
+   *)
+
+  let ( +> ) a b = overlay a b
+  let ( *> ) a b = connect a b
+
+  (*
+   * Helper functions.
+   *)
 
   let rec to_string = function
+    | Empty -> "()"
     | Vertex v -> "Vertex " ^ (T.to_string v)
     | Overlay (a, b) -> "Overlay (" ^ (to_string a) ^ ", " ^ (to_string b) ^ ")"
     | Connect (a, b) -> "Connect (" ^ (to_string a) ^ ", " ^ (to_string b) ^ ")"
 
   let rec (=) a b =
     match a, b with
+    | Empty, Empty -> true
     | Vertex a, Vertex b -> Int.equal (T.compare a b) 0
     | Overlay (a0, b0), Overlay (a1, b1) -> a0 = a1 && b0 = b1
     | Connect (a0, b0), Connect (a1, b1) -> a0 = a1 && b0 = b1
     | _ -> false
+
+  (*
+   * Evaluation functions.
+   *)
 
   module Topology = Topology(T)
 
@@ -63,6 +98,7 @@ module Algebra (T: OrderedType) = struct
 
   let rec eval_r a =
     match a with
+    | Empty -> EdgeSet.empty, VertexSet.empty
     | Vertex a ->
       EdgeSet.empty, (VertexSet.add (Topology.Vertex a) VertexSet.empty)
     | Overlay (a, b) ->

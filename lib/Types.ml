@@ -1,5 +1,32 @@
 (*
- * Type definitions.
+ * Classes.
+ *)
+
+class ['a] reader = object
+  method read: 'a Lwt.t =
+    failwith "unimplemented"
+end
+
+class ['a] writer = object
+  method write (_: 'a): unit Lwt.t =
+    failwith "unimplemented"
+end
+
+class ['a] stream = object
+  inherit ['a] reader
+  inherit ['a] writer
+end
+
+class ['a, 'b] operator reader writer = object
+  val reader: 'a reader = (reader :> 'a reader)
+  val writer: 'b writer = (writer :> 'b writer)
+
+  method process: unit Lwt.t =
+    failwith "unimplemented"
+end
+
+(*
+ * Modules and types.
  *)
 
 type 'a input = unit -> 'a Lwt.t
