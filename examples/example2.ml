@@ -114,60 +114,44 @@ end
  * Objects.
  *)
 
-module Beacon(T: Tuple) = struct
-  class operator reader writer = object
-    inherit [unit, T.t] Types.operator reader writer
+class ['a] beacon ~zero ~next reader writer = object
+  inherit [unit, 'a] Types.operator reader writer
 
-    val state = T.zero ()
+  val mutable state = zero ()
 
-    method process =
-      let rec process_r () =
-        reader#read
-        >>= fun () -> Lwt_unix.sleep 1.0
-        >>= fun () -> Logs_lwt.info (fun m -> m "Generating %s" (T.to_string state))
-        >>= fun () -> writer#write state
-        >>= process_r
-      in
-      process_r ()
-  end
+  method process =
+    let rec process_r () =
+      reader#read
+      >>= fun () -> Lwt_unix.sleep 1.0
+      >>= fun () -> state <- next state; writer#write state
+      >>= process_r
+    in
+    process_r ()
 end
 
-module Dup(T: Tuple) = struct
-  class operator reader writer = object
-    inherit [T.t, T.t * T.t] Types.operator reader writer
+class ['a] duplicate reader writer = object
+  inherit ['a, 'a * 'a] Types.operator reader writer
 
-    val state = T.zero ()
-
-    method process =
-      let rec process_r () =
-        reader#read
-        >>= fun v -> writer#write (v, v)
-        >>= process_r
-      in
-      process_r ()
-  end
+  method process =
+    let rec process_r () =
+      reader#read
+      >>= fun v -> writer#write (v, v)
+      >>= process_r
+    in
+    process_r ()
 end
 
-module Sink(T: Tuple) = struct
-  class operator input output = object
-    inherit [T.t, unit] Types.operator input output
+class ['a] sink reader writer = object
+  inherit ['a, unit] Types.operator reader writer
 
-    val state = T.zero ()
-
-    method process =
-      let rec process_r () =
-        reader#read
-        >>= fun v -> Logs_lwt.info (fun m -> m "Consuming %s" (T.to_string v))
-        >>= writer#write
-        >>= process_r
-      in
-      process_r ()
-  end
+  method process =
+    let rec process_r () =
+      reader#read
+      >>= fun _ -> writer#write ()
+      >>= process_r
+    in
+    process_r ()
 end
-
-module B = Beacon(OneIntTuple)
-module D = Dup(OneIntTuple)
-module K = Sink(TwoIntTuple)
 
 (*
  * Graph.
@@ -195,15 +179,10 @@ let () =
   and s0 = new Mailbox.stream
   and s1 = new Mailbox.stream
   in
-  let builder = function
-    | `Beacon, _ -> new B.operator void s0
-    | `Dup, _ -> new D.operator s0 s1
-    | `Sink, _ -> new K.operator s1 void
-  in
   (* Operators *)
-  [ builder (`Beacon, "")
-  ; builder (`Dup, "")
-  ; builder (`Sink, "")
+  [ new beacon ~zero:(fun () -> 0) ~next:(fun v -> v + 1) void s0
+  ; new duplicate s0 s1
+  ; new sink s1 void
   ]
   |> List.map (fun e -> e#process)
   |> Lwt.join

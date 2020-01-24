@@ -17,10 +17,6 @@ class ['a] stream = object
   inherit ['a] writer
 end
 
-module type StreamImpl = sig
-  val make: unit -> 'a stream
-end
-
 class ['a, 'b] operator reader writer = object
   val reader: 'a reader = (reader :> 'a reader)
   val writer: 'b writer = (writer :> 'b writer)
