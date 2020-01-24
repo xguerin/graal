@@ -173,25 +173,15 @@ module K = Sink(TwoIntTuple)
  * Graph.
  *)
 
-module OrderedType = struct
-  type t =
-    | Beacon
-    | Dup
-    | Sink
-  [@@deriving ord, show]
-end
-
-module Algebra = Graph.Algebra(OrderedType)
-
 let make_graph () =
-  let open Algebra in
-  (Vertex ("B0", Beacon) +> Vertex ("B1", Beacon)) *> Vertex ("D0", Dup)
+  let open Graph.Algebra in
+  (Vertex ("B0", `Beacon) +> Vertex ("B1", `Beacon)) *> Vertex ("D0", `Dup)
   +>
-  Vertex ("D0", Dup) *> Vertex ("S0", Sink)
+  Vertex ("D0", `Dup) *> Vertex ("S0", `Sink)
 
 let eval_graph g =
-  let open Algebra in
-  eval (fun () -> new Mailbox.stream) g
+  let open Graph.Algebra in
+  eval g
 
 (*
  * Main.

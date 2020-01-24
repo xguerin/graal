@@ -1,5 +1,7 @@
 (library
   (flags
     (:standard -bin-annot))
+  (preprocess 
+   (pps ppx_deriving.ord ppx_deriving.show))
   (libraries lwt lwt.unix logs logs.lwt)
   (name fstream))

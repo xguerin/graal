@@ -1,9 +1,3 @@
-module type OrderedType = sig
-  type t
-  val compare: t -> t -> int
-  val show: t -> string
-end
-
 (*
  * Classes.
  *)

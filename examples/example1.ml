@@ -10,14 +10,12 @@ module VoidType = struct
   let show _ = "()"
 end
 
-module Algebra = Graph.Algebra(VoidType)
-
 (*
  * Graph function.
  *)
 
 let algebra_cons () =
-  let open Algebra in
+  let open Graph.Algebra in
   Overlay (
     Overlay (Overlay (Overlay (Connect (Overlay (Vertex ("B0", ()), Vertex ("B1", ())), Vertex ("M0", ())),
                                Connect (Vertex ("M0", ()), Vertex ("X0", ()))),
@@ -26,7 +24,7 @@ let algebra_cons () =
     Connect (Vertex ("S0", ()), Overlay (Vertex ("K0", ()), Vertex ("K1", ()))))
 
 let algebra_oper () =
-  let open Algebra in
+  let open Graph.Algebra in
   (Vertex ("B0", ()) +> Vertex ("B1", ())) *> Vertex ("M0", ())
   +>
   Vertex ("M0", ()) *> Vertex ("X0", ())
@@ -38,7 +36,7 @@ let algebra_oper () =
   Vertex ("S0", ()) *> (Vertex ("K0", ()) +> Vertex ("K1", ()))
 
 let check_graphs () =
-  let open Algebra in
+  let open Graph.Algebra in
   let g1 = algebra_cons ()
   and g2 = algebra_oper ()
   in
@@ -47,7 +45,7 @@ let check_graphs () =
   assert (g1 = g2)
 
 let check_comparisons () =
-  let open Algebra in
+  let open Graph.Algebra in
   assert (((Vertex ("B0", ()) +> Vertex ("B1", ())) *> Vertex ("M0", ())) =
           (Connect (Overlay (Vertex ("B0", ()), Vertex ("B1", ())), Vertex ("M0", ()))));
   assert (((Vertex ("B0", ()) +> Vertex ("B1", ())) *> Vertex ("M0", ()) +> Vertex ("M0", ()) *> Vertex ("X0", ())) =

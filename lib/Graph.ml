@@ -1,33 +1,36 @@
-module Algebra (T: Types.OrderedType) = struct
-  type t =
+(*
+ * Type definitions.
+ *)
+
+module EdgeKeyType = struct
+  type t = string * string
+  [@@deriving ord, show]
+end
+
+module Edges = Set.Make(EdgeKeyType)
+module Vertices = Map.Make(String)
+
+type ('a, 'b) t = Edges.t * 'b Vertices.t
+let make edges vertices = (edges, vertices)
+
+(*
+ * Algebra.
+ *)
+
+module Algebra = struct
+  type 'a t =
     | Empty
-    | Vertex of string * T.t
-    | Connect of t * t
-    | Overlay of t * t
+    | Vertex of string * 'a
+    | Connect of 'a t * 'a t
+    | Overlay of 'a t * 'a t
 
   (*
    * Vertex constructor operation.
    *)
 
   let vertex l v = Vertex(l, v)
-
-  (*
-   * Connecting to nothing gets you nothing. The 0 operation is communitative.
-   *)
-
-  let connect a b =
-    match a, b with
-    | Empty, _ | _, Empty -> Empty
-    | a, b -> Connect (a, b)
-
-  (*
-   * Empty is the identity element for Overlay.
-   *)
-
-  let overlay a b =
-    match a, b with
-    | Empty, a | a, Empty -> a
-    | a, b -> Overlay (a, b)
+  let connect a b = Connect (a, b)
+  let overlay a b = Overlay (a, b)
 
   (*
    * Infix operators.
@@ -49,7 +52,7 @@ module Algebra (T: Types.OrderedType) = struct
   let rec (=) a b =
     match a, b with
     | Empty, Empty -> true
-    | Vertex(_, a), Vertex(_, b) -> Int.equal (T.compare a b) 0
+    | Vertex(l0, _), Vertex(l1, _) -> String.equal l0 l1
     | Overlay(a0, b0), Overlay(a1, b1) -> a0 = a1 && b0 = b1
     | Connect(a0, b0), Connect(a1, b1) -> a0 = a1 && b0 = b1
     | _ -> false
@@ -58,39 +61,38 @@ module Algebra (T: Types.OrderedType) = struct
    * Evaluation functions.
    *)
 
-  let rec eval_r mkedge a =
-    let module T =  Topology.Make(T) in
+  let rec eval_r a =
     match a with
-    | Empty -> T.Edges.empty, T.Vertices.empty
-    | Vertex(l, a) ->
-      T.Edges.empty, (T.Vertices.add l (T.Vertex(a, [], [])) T.Vertices.empty)
+    (* Empty reductions *)
+    | Empty
+    | Connect(Empty, _)
+    | Connect(_, Empty) -> Edges.empty, Vertices.empty
+    (* Idempotent reductions *)
+    | Overlay(a, Empty)
+    | Overlay(Empty, a) -> eval_r a
+    (* Other reductions *)
+    | Vertex(l, a) -> Edges.empty, (Vertices.add l a Vertices.empty)
     | Overlay(a, b) ->
-      let e_a, v_a = eval_r mkedge a
-      and e_b, v_b = eval_r mkedge b
+      let e_a, v_a = eval_r a
+      and e_b, v_b = eval_r b
       in
-      T.Edges.union (fun _ a _ -> Some a) e_a e_b,
-      T.Vertices.union (fun _ a _ -> Some a) v_a v_b
+      Edges.union e_a e_b, Vertices.union (fun _ a _ -> Some a) v_a v_b
     | Connect(a, b) ->
-      let e_a, v_a = eval_r mkedge a
-      and e_b, v_b = eval_r mkedge b
+      let e_a, v_a = eval_r a
+      and e_b, v_b = eval_r b
       in
-      let edges, vertices = T.Edges.union (fun _ a _ -> Some a) e_a e_b,
-                            T.Vertices.union (fun _ a _ -> Some a) v_a v_b
+      let e_n, v_n = Edges.union e_a e_b, Vertices.union (fun _ a _ -> Some a) v_a v_b
       in
-      let new_edges = T.Vertices.fold (fun k0 _ acc ->
-          T.Vertices.fold
-            (fun k1 _ acc ->
-               T.Edges.add (k0 ^ ">" ^ k1) (T.Edge (mkedge ())) acc)
-            v_b T.Edges.empty
-        |> T.Edges.union (fun _ a _ -> Some a) acc)
-        v_a
-        T.Edges.empty
+      let e_x = Vertices.fold
+          (fun k0 _ acc ->
+             Vertices.fold
+               (fun k1 _ acc -> Edges.add (k0, k1) acc) v_b Edges.empty
+             |> Edges.union acc)
+          v_a Edges.empty
       in
-      T.Edges.union (fun _ a _ -> Some a) edges new_edges,
-      vertices
+      Edges.union e_n e_x, v_n
 
-  let eval mkedge a =
-    let module T =  Topology.Make(T) in
-    let e, v = eval_r mkedge a in
-    T.Graph(e, v)
+  let eval a =
+    let e, v = eval_r a in
+    make e v
 end
