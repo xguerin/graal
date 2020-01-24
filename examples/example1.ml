@@ -1,56 +1,47 @@
+open Lwt.Infix
 open Fstream
 
 (*
- * Define a string-based algebra.
+ * Graph.
  *)
 
-module VoidType = struct
-  type t = unit
-  let compare _ _ = 0
-  let show _ = "()"
-end
+let make_graph () =
+  let open Graph.Algebra in
+  (Vertex ("B0", `Beacon) +> Vertex ("B1", `Beacon))
+  *>
+  Vertex ("S0", `Sink)
+
+let eval_graph () =
+  let open Graph in
+  Algebra.eval (make_graph ())
 
 (*
- * Graph function.
+ * Main.
  *)
 
-let algebra_cons () =
-  let open Graph.Algebra in
-  Overlay (
-    Overlay (Overlay (Overlay (Connect (Overlay (Vertex ("B0", ()), Vertex ("B1", ())), Vertex ("M0", ())),
-                               Connect (Vertex ("M0", ()), Vertex ("X0", ()))),
-                      Connect (Vertex ("X0", ()), Vertex ("Y0", ()))),
-             Connect (Vertex ("Y0", ()), Vertex ("S0", ()))),
-    Connect (Vertex ("S0", ()), Overlay (Vertex ("K0", ()), Vertex ("K1", ()))))
-
-let algebra_oper () =
-  let open Graph.Algebra in
-  (Vertex ("B0", ()) +> Vertex ("B1", ())) *> Vertex ("M0", ())
-  +>
-  Vertex ("M0", ()) *> Vertex ("X0", ())
-  +>
-  Vertex ("X0", ()) *> Vertex ("Y0", ())
-  +>
-  Vertex ("Y0", ()) *> Vertex ("S0", ())
-  +>
-  Vertex ("S0", ()) *> (Vertex ("K0", ()) +> Vertex ("K1", ()))
-
-let check_graphs () =
-  let open Graph.Algebra in
-  let g1 = algebra_cons ()
-  and g2 = algebra_oper ()
-  in
-  Printf.printf "%s\n" (to_string g1);
-  Printf.printf "%s\n" (to_string g2);
-  assert (g1 = g2)
-
-let check_comparisons () =
-  let open Graph.Algebra in
-  assert (((Vertex ("B0", ()) +> Vertex ("B1", ())) *> Vertex ("M0", ())) =
-          (Connect (Overlay (Vertex ("B0", ()), Vertex ("B1", ())), Vertex ("M0", ()))));
-  assert (((Vertex ("B0", ()) +> Vertex ("B1", ())) *> Vertex ("M0", ()) +> Vertex ("M0", ()) *> Vertex ("X0", ())) =
-          (Overlay (Connect (Overlay (Vertex ("B0", ()), Vertex ("B1", ())), Vertex ("M0", ())), Connect (Vertex ("M0", ()), Vertex ("X0", ())))))
-
 let () =
-  check_comparisons ();
-  check_graphs ()
+  Logs.set_reporter (Logs.format_reporter ());
+  Logs.set_level (Some Logs.Info);
+  (* Streams *)
+  let void = new Streams.Unit.stream
+  and stm0 = new Streams.Mailbox.stream
+  and stm1 = new Streams.Mailbox.stream
+  and stm2 = new Streams.Mailbox.stream
+  and stm3 = new Streams.Mailbox.stream
+  and stm4 = new Streams.Mailbox.stream
+  and stm5 = new Streams.Mailbox.stream
+  in
+  (* Operators *)
+  [ new Std.beacon ~zero:(fun () -> 0) ~next:(fun v -> v + 1) void stm0
+  ; new Std.beacon ~zero:(fun () -> 0) ~next:(fun v -> v + 1) void stm1
+  ; new Std.merge (stm0, stm1) stm2
+  ; new Std.apply ~fn:(fun (v0, v1) ->
+        Logs_lwt.info (fun m -> m "(%d, %d)" v0 v1)
+        >>= fun () -> Lwt.return (v0, v1)) stm2 stm3
+  ; new Std.split stm3 (stm4, stm5)
+  ; new Std.sink stm4 void
+  ; new Std.sink stm5 void
+  ]
+  |> List.map (fun e -> e#process)
+  |> Lwt.join
+  |> Lwt_main.run
