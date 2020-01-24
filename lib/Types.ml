@@ -1,3 +1,9 @@
+module type OrderedType = sig
+  type t
+  val compare: t -> t -> int
+  val show: t -> string
+end
+
 (*
  * Classes.
  *)
@@ -15,6 +21,10 @@ end
 class ['a] stream = object
   inherit ['a] reader
   inherit ['a] writer
+end
+
+module type StreamImpl = sig
+  val make: unit -> 'a stream
 end
 
 class ['a, 'b] operator reader writer = object

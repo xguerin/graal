@@ -106,6 +106,8 @@ module Mailbox = struct
         >>= fun () -> thread
       | _ -> failwith "Invalid PUT state"
   end
+
+  let make () = new stream;
 end
 
 (*
@@ -168,6 +170,30 @@ module D = Dup(OneIntTuple)
 module K = Sink(TwoIntTuple)
 
 (*
+ * Graph.
+ *)
+
+module OrderedType = struct
+  type t =
+    | Beacon
+    | Dup
+    | Sink
+  [@@deriving ord, show]
+end
+
+module Algebra = Graph.Algebra(OrderedType)
+
+let make_graph () =
+  let open Algebra in
+  (Vertex ("B0", Beacon) +> Vertex ("B1", Beacon)) *> Vertex ("D0", Dup)
+  +>
+  Vertex ("D0", Dup) *> Vertex ("S0", Sink)
+
+let eval_graph g =
+  let open Algebra in
+  eval (fun () -> new Mailbox.stream) g
+
+(*
  * Main.
  *)
 
@@ -179,10 +205,15 @@ let () =
   and s0 = new Mailbox.stream
   and s1 = new Mailbox.stream
   in
+  let builder = function
+    | `Beacon, _ -> new B.operator void s0
+    | `Dup, _ -> new D.operator s0 s1
+    | `Sink, _ -> new K.operator s1 void
+  in
   (* Operators *)
-  [ new B.operator void s0
-  ; new D.operator s0 s1
-  ; new K.operator s1 void
+  [ builder (`Beacon, "")
+  ; builder (`Dup, "")
+  ; builder (`Sink, "")
   ]
   |> List.map (fun e -> e#process)
   |> Lwt.join
