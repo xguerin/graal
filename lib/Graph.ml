@@ -95,4 +95,23 @@ module Algebra = struct
   let eval a =
     let e, v = eval_r a in
     make e v
+
+  (*
+   * Infix combinator.
+   *)
+
+  let ( *+> ) a b =
+    let module E = Edges in
+    let module V = Vertices in
+    eval a
+    |> fun (e, v) ->
+    V.filter (fun key _ -> E.filter (fun (l, _) -> String.equal key l) e |> E.is_empty) v
+    |> fun sel -> V.fold (fun k v acc -> Vertex(k, v) :: acc) sel []
+    |> function
+    | [] -> Overlay(a, b)
+    | v0 :: [] -> Overlay(a, Connect(v0, b))
+    | v0 :: v1 :: tl ->
+      let group = List.fold_left (fun acc e -> Overlay(acc, e)) (Overlay(v0, v1)) tl in
+      Overlay(a, Connect(group, b))
+
 end
