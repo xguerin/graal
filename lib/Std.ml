@@ -28,6 +28,18 @@ class beacon ?(delay=1.0) ~zero ~next reader writer = object
     process_r ()
 end
 
+class filter ~fn reader writer = object
+  inherit Types.operator
+
+  method process =
+    let rec process_r () =
+      reader#read
+      >>= fun v -> if (fn v) then writer#write v else Lwt.return ()
+      >>= process_r
+    in
+    process_r ()
+end
+
 class merge (r0, r1) writer = object
   inherit Types.operator
 
