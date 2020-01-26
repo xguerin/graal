@@ -39,7 +39,7 @@ let () =
   Logs.set_reporter (Logs.format_reporter ());
   Logs.set_level (Some Logs.Info);
   (* Graph *)
-  let%graph (_, procs) =
+  let%graph (items, _) =
     (Vertex("B0", beacon ~delay:0.25)
      +> Vertex("B1", beacon ~delay:0.5)
      +> Vertex("B2", beacon ~delay:1.0)
@@ -51,4 +51,8 @@ let () =
     *+>
     Vertex("S0", new sink)
   in
-  Lwt_main.run procs
+  let (edges, vertices) = items in
+  Printf.printf "digraph my_graph {\n";
+  List.iter (fun e -> Printf.printf "  %s;\n" e) vertices;
+  List.iter (fun (a, b) -> Printf.printf "  %s -> %s;\n" a b) edges;
+  Printf.printf "}"

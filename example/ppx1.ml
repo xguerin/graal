@@ -21,7 +21,7 @@ let () =
   Logs.set_reporter (Logs.format_reporter ());
   Logs.set_level (Some Logs.Info);
   (* Graph *)
-  let%graph graph =
+  let%graph (_, procs) =
     (Vertex("B0", beacon) +> Vertex("B1", beacon))
     *>
     Vertex("M0", new merge)
@@ -30,4 +30,4 @@ let () =
     *+>
     Vertex("S0", new sink)
   in
-  Lwt_main.run graph
+  Lwt_main.run procs

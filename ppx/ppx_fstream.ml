@@ -33,8 +33,12 @@ let value_binding ~loc label expr =
   ; pvb_loc = loc
   }
 
+let to_list ~loc v =
+  List.fold_right (fun e acc -> constr ~loc "::" [e; acc])
+    v (constr ~loc "[]" [])
+
 (*
- * Algebra parser.
+ * Algebra parser and converter.
  *)
 
 let combine e0 e1 =
@@ -71,6 +75,22 @@ let rec convert = function
 let edge_name (f, t) =
   String.lowercase_ascii (f ^ "_" ^ t)
 
+(*
+ * Graph generator.
+ *)
+
+let generate_graph ~loc (edges, vertices) =
+  let tuples = Edges.fold (fun (a, b) acc ->
+      tuple ~loc [str ~loc a; str ~loc b] :: acc) edges []
+  and vertices = Vertices.fold (fun k _ acc ->
+      (str ~loc k) :: acc) vertices []
+  in
+  tuple ~loc [to_list ~loc tuples; to_list ~loc vertices]
+
+(*
+ * Streams and processes generators.
+ *)
+
 let generate_edges ~loc (edges, _) expr =
   let void = value_binding ~loc "void" [%expr new Fstream.Streams.Unit.stream] in
   let vbs = Edges.fold (fun e acc ->
@@ -96,7 +116,7 @@ let make_edge_argument ~loc edges =
     |> List.rev
     |> tuple ~loc
 
-let generate_vertices ~loc (edges, vertices) =
+let generate_process_list ~loc (edges, vertices) =
   let exprs = Vertices.fold (fun label expr acc ->
       let source_edges = find_sources label edges
       and target_edges = find_targets label edges
@@ -114,12 +134,22 @@ let generate_vertices ~loc (edges, vertices) =
       constr ~loc "::" [tuple])
     exprs (constr ~loc "[]" [])
 
-let process expr =
-  let graph = convert expr |> eval in
-  generate_vertices ~loc:expr.pexp_loc graph
+let generate_processes ~loc graph =
+  generate_process_list ~loc graph
   |> fun expr -> [%expr List.map (fun e -> e#process) [%e expr]]
   |> fun expr -> [%expr Lwt.join [%e expr]]
-  |> generate_edges ~loc:expr.pexp_loc graph
+
+let generate expr =
+  let result = convert expr |> eval
+  and loc = expr.pexp_loc
+  in
+  let graph = generate_graph ~loc result
+  and procs = generate_processes ~loc result |> generate_edges ~loc result
+  in
+  let_in ~loc [ value_binding ~loc "graph" graph
+              ; value_binding ~loc "procs" procs
+              ]
+    (tuple ~loc [evar ~loc "graph"; evar ~loc "procs"])
 
 (*
  * Rewriter.
@@ -130,11 +160,11 @@ let extension expr =
   match expr.pexp_desc with
   | Pexp_let (Nonrecursive, bindings, expr) ->
     let eval = List.map (fun ({ pvb_expr; _} as vb) ->
-        { vb with pvb_expr = process pvb_expr })
+        { vb with pvb_expr = generate pvb_expr })
         bindings
     in
     { expr with pexp_desc = Pexp_let (Nonrecursive, eval, expr) }
-  | Pexp_apply(_, _) -> process expr
+  | Pexp_apply(_, _) -> generate expr
   | _ -> location_exn ~loc "[ppx_fstream] only 'let' or [%graph] supported"
 
 let expression mapper = function
