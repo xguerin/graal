@@ -8,32 +8,39 @@ let beacon ~delay =
 let apply_fn (label, v) =
   Logs_lwt.info (fun m -> m "[%s] %d" label v) >>= fun () -> Lwt.return v
 
-class custom (r0, r1) writer = object
+class custom (r0, r1) writer = object(self)
   inherit Fstream.Types.operator
 
   val r0_window = new Windows.sliding ~count:5 ~fn:(List.fold_left Int.add 0)
   val r1_window = new Windows.tumbling ~count:5 ~fn:(List.fold_left Int.add 0)
 
-  method process =
-    let rec process_r0 () =
+  method private process_r0 =
+    let rec process () =
       r0#read
       >>= r0_window#write
       >>= begin function
         | Some(v) -> writer#write ("r0", v)
         | None -> Lwt.return ()
       end
-      >>= process_r0
-    and process_r1 () =
+      >>= process
+    in
+    process ()
+
+  method private process_r1 =
+    let rec process () =
       r1#read
       >>= r1_window#write
       >>= begin function
         | Some(v) -> writer#write ("r1", v)
         | None -> Lwt.return ()
       end
-      >>= process_r1
+      >>= process
     in
-    Lwt.join [ process_r0 ()
-             ; process_r1 ()
+    process ()
+
+  method process =
+    Lwt.join [ self#process_r0
+             ; self#process_r1
              ]
 end
 

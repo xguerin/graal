@@ -7,31 +7,46 @@ let beacon ~delay =
 let apply_fn (label, v) =
   Logs_lwt.info (fun m -> m "[%s] %d" label v) >>= fun () -> Lwt.return v
 
-class custom (r0, r1, r2, r3) writer = object
+class custom (r0, r1, r2, r3) writer = object(self)
   inherit Fstream.Types.operator
 
-  method process =
+  method private process_r0 =
     let rec process_r0 () =
       r0#read
       >>= fun v -> writer#write ("r0", v)
       >>= process_r0
-    and process_r1 () =
+    in
+    process_r0 ()
+
+  method private process_r1 =
+    let rec process_r1 () =
       r1#read
       >>= fun v -> writer#write ("r1", v)
       >>= process_r1
-    and process_r2 () =
+    in
+    process_r1 ()
+
+  method private process_r2 =
+    let rec process_r2 () =
       r2#read
       >>= fun v -> writer#write ("r2", v)
       >>= process_r2
-    and process_r3 () =
+    in
+    process_r2 ()
+
+  method private process_r3 =
+    let rec process_r3 () =
       r3#read
       >>= fun v -> writer#write ("r3", v)
       >>= process_r3
     in
-    Lwt.join [ process_r0 ()
-             ; process_r1 ()
-             ; process_r2 ()
-             ; process_r3 ()
+    process_r3 ();
+
+  method process =
+    Lwt.join [ self#process_r0
+             ; self#process_r1
+             ; self#process_r2
+             ; self#process_r3
              ]
 end
 

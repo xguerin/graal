@@ -1,19 +1,16 @@
-class ['a] reader = object
-  method read: 'a Lwt.t =
-    failwith "unimplemented"
+class virtual ['a] reader = object
+  method virtual read: 'a Lwt.t
 end
 
-class ['a] writer = object
-  method write (_: 'a): unit Lwt.t =
-    failwith "unimplemented"
+class virtual ['a] writer = object
+  method virtual write: 'a -> unit Lwt.t
 end
 
-class ['a] stream = object
+class virtual ['a] stream = object
   inherit ['a] reader
   inherit ['a] writer
 end
 
-class operator = object
-  method process: unit Lwt.t =
-    failwith "unimplemented"
+class virtual operator = object
+  method virtual process: unit Lwt.t
 end
