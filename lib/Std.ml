@@ -1,6 +1,6 @@
 open Lwt.Infix
 
-class ['a, 'b] apply ~fn reader writer = object
+class apply ~fn reader writer = object
   inherit Types.operator
 
   method process =
@@ -13,7 +13,7 @@ class ['a, 'b] apply ~fn reader writer = object
     process_r ()
 end
 
-class ['a] beacon ?(delay=1.0) ~zero ~next reader writer = object
+class beacon ?(delay=1.0) ~zero ~next reader writer = object
   inherit Types.operator
 
   val mutable state = zero ()
@@ -28,7 +28,7 @@ class ['a] beacon ?(delay=1.0) ~zero ~next reader writer = object
     process_r ()
 end
 
-class ['a, 'b] merge (r0, r1) writer = object
+class merge (r0, r1) writer = object
   inherit Types.operator
 
   method process =
@@ -41,7 +41,7 @@ class ['a, 'b] merge (r0, r1) writer = object
     process_r ()
 end
 
-class ['a] sink reader writer = object
+class sink reader writer = object
   inherit Types.operator
 
   method process =
@@ -53,7 +53,7 @@ class ['a] sink reader writer = object
     process_r ()
 end
 
-class ['a, 'b] split reader (w0, w1) = object
+class split reader (w0, w1) = object
   inherit Types.operator
 
   method process =

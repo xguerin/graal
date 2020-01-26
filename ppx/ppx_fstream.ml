@@ -93,6 +93,7 @@ let make_edge_argument ~loc edges =
   else
     Edges.fold (fun e acc -> ident ~loc (lid (edge_name e)) :: acc)
       edges []
+    |> List.rev
     |> tuple ~loc
 
 let generate_vertices ~loc (edges, vertices) =

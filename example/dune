@@ -1,5 +1,5 @@
 (executables
-  (names example1 example2 ppx1 ppx2)
+  (names example1 example2 ppx1 ppx2 ppx3)
   (preprocess 
    (pps ppx_deriving.ord ppx_deriving.show ppx_fstream))
   (libraries fstream lwt lwt.unix logs logs.lwt))
