@@ -1,4 +1,5 @@
 open Lwt.Infix
+open Fstream
 open Fstream.Std
 
 let beacon ~delay =
@@ -7,9 +8,7 @@ let beacon ~delay =
 let apply_fn (label, v) =
   Logs_lwt.info (fun m -> m "[%s] %d" label v) >>= fun () -> Lwt.return v
 
-class custom (r0, r1, r2, r3) writer = object(self)
-  inherit Fstream.Types.operator
-
+class custom (r0, r1, r2, r3) writer : Types.operator = object(self)
   method private process_r0 =
     let rec process_r0 () =
       r0#read

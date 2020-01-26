@@ -4,9 +4,7 @@ open Lwt.Infix
  * Beacon.
  *)
 
-class beacon ?(delay=1.0) ~zero ~next reader writer = object
-  inherit Types.operator
-
+class beacon ?(delay=1.0) ~zero ~next reader writer : Types.operator = object
   val mutable state = zero ()
 
   method process =
@@ -23,9 +21,7 @@ end
  * Functor and filter.
  *)
 
-class apply ~fn reader writer = object
-  inherit Types.operator
-
+class apply ~fn reader writer : Types.operator = object
   method process =
     let rec process_r () =
       reader#read
@@ -37,9 +33,7 @@ class apply ~fn reader writer = object
 end
 
 
-class filter ~fn reader writer = object
-  inherit Types.operator
-
+class filter ~fn reader writer : Types.operator = object
   method process =
     let rec process_r () =
       reader#read
@@ -53,9 +47,7 @@ end
  * Subgraph input/output.
  *)
 
-class input ~reader _ writer = object
-  inherit Types.operator
-
+class input ~reader _ writer : Types.operator = object
   method process =
     let rec process_r () =
       reader#read
@@ -65,9 +57,7 @@ class input ~reader _ writer = object
     process_r()
 end
 
-class output ~writer reader _ = object
-  inherit Types.operator
-
+class output ~writer reader _ : Types.operator = object
   method process =
     let rec process_r () =
       reader#read
@@ -81,9 +71,7 @@ end
  * Merge/split.
  *)
 
-class duplicate reader (w0, w1) = object
-  inherit Types.operator
-
+class duplicate reader (w0, w1) : Types.operator = object
   method process =
     let rec process_r () =
       reader#read
@@ -94,9 +82,7 @@ class duplicate reader (w0, w1) = object
     process_r ()
 end
 
-class merge (r0, r1) writer = object
-  inherit Types.operator
-
+class merge (r0, r1) writer : Types.operator = object
   method process =
     let rec process_r () =
       r0#read
@@ -107,9 +93,7 @@ class merge (r0, r1) writer = object
     process_r ()
 end
 
-class split reader (w0, w1) = object
-  inherit Types.operator
-
+class split reader (w0, w1) : Types.operator = object
   method process =
     let rec process_r () =
       reader#read
@@ -124,9 +108,7 @@ end
  * Generic sink.
  *)
 
-class sink reader writer = object
-  inherit Types.operator
-
+class sink reader writer : Types.operator = object
   method process =
     let rec process_r () =
       reader#read
