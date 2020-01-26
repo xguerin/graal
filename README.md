@@ -1,4 +1,10 @@
-# Graph Algebra
+# GRAph ALgebra
+
+## About
+
+Source of inspiration: [ALGA](https://github.com/snowleopard/alga).
+
+## Working with the PPX 
 
 To see the parse tree of a ML file:
 ```
