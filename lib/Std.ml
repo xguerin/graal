@@ -44,6 +44,44 @@ class filter ~fn reader writer : Types.operator = object
 end
 
 (*
+ * File source/sink.
+ *)
+
+class file_source ~path reader writer : Types.operator = object
+  val mutable channel = None
+
+  method process =
+    let rec process_r () =
+      reader#read
+      >>= fun () -> begin
+        match channel with
+        | Some(c) -> Lwt_io.read_line c >>= writer#write
+        | None -> Lwt.return ()
+      end
+      >>= process_r
+    in
+    Lwt_io.open_file ~mode:Lwt_io.Input path
+    >>= fun c -> channel <- Some(c); process_r ()
+end
+
+class file_sink ~path reader writer : Types.operator = object
+  val mutable channel = None
+
+  method process =
+    let rec process_r () =
+      reader#read
+      >>= fun v -> begin
+        match channel with
+        | Some(c) -> Lwt_io.write_line c v >>= writer#write
+        | None -> Lwt.return ()
+      end
+      >>= process_r
+    in
+    Lwt_io.open_file ~mode:Lwt_io.Output path
+    >>= fun c -> channel <- Some(c); process_r ()
+end
+
+(*
  * Subgraph input/output.
  *)
 
