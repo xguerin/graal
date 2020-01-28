@@ -9,6 +9,8 @@ class ['a, 'b] sliding ~(fn: ('a list -> 'b)) ~count = object(self)
     in
     v :: (drop window)
 
+  method content = window
+
   method write v =
     if (List.length window) = count then
       let result = Some (fn window) in
@@ -22,6 +24,8 @@ end
 
 class ['a, 'b] tumbling ~(fn: ('a list -> 'b)) ~count = object
   val mutable window: 'a list = []
+
+  method content = window
 
   method write v =
     if (List.length window) = count then

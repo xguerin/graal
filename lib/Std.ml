@@ -37,7 +37,7 @@ class filter ~fn reader writer : Types.operator = object
   method process =
     let rec process_r () =
       reader#read
-      >>= fun v -> if (fn v) then writer#write v else Lwt.return ()
+      >>= (fun v -> if (fn v) then writer#write v else Lwt.return ())
       >>= process_r
     in
     process_r ()
