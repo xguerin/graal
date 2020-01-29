@@ -1,5 +1,5 @@
 (tests
-  (names infix_1_sink infix_N_sink graph_manual graph_ppx)
+  (names infix_1 infix_N graph_manual graph_ppx)
   (preprocess 
    (pps ppx_deriving.ord ppx_deriving.show ppx_fstream))
   (libraries fstream lwt lwt.unix logs logs.lwt ounit2))

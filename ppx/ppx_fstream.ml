@@ -62,7 +62,11 @@ let rec convert = function
   | [%expr [%e? e0] *> [%e? e1]] ->
     Connect(convert e0, convert e1)
   | [%expr [%e? e0] *+> [%e? e1]] ->
-    combine (convert e0) (convert e1)
+    Fstream.Graph.Algebra.( *+> ) (convert e0) (convert e1)
+  | [%expr [%e? e0] +*> [%e? e1]] ->
+    Fstream.Graph.Algebra.( +*> ) (convert e0) (convert e1)
+  | [%expr [%e? e0] */> [%e? e1]] ->
+    Fstream.Graph.Algebra.( */> ) (convert e0) (convert e1)
   (* Vertex *)
   | [%expr Vertex[%e?
         { pexp_desc = Pexp_tuple([ { pexp_desc = Pexp_constant(Pconst_string(label, _))

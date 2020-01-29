@@ -76,6 +76,35 @@ let beacon_merge_split_sink_graph _ =
   in
   Lwt_main.run procs
 
+let beacon_merge_split_sink_graph_with_capture_all _ =
+  let check1 v = assert_equal v 1; Lwt.return v
+  and check2 v = assert_equal v (1, 1); Lwt.return v
+  in
+  let%graph (_, procs) =
+    ((Vertex("Beacon0", new Std.beacon ~run:Std.once ~zero ~next)
+      *>
+      Vertex("Check0", new Std.apply ~run:Std.once ~fn:check1))
+     +>
+     (Vertex("Beacon1", new Std.beacon ~run:Std.once ~zero ~next)
+      *>
+      Vertex("Check1", new Std.apply ~run:Std.once ~fn:check1)))
+    */>
+    Vertex("Merge", new Std.merge ~run:Std.once)
+    *+>
+    Vertex("Check2", new Std.apply ~run:Std.once ~fn:check2)
+    *+>
+    Vertex("Split", new Std.split ~run:Std.once)
+    */>
+    ((Vertex("Check3", new Std.apply ~run:Std.once ~fn:check1)
+      *>
+      Vertex("Sink0", new Std.sink ~run:Std.once))
+     +>
+     (Vertex("Check4", new Std.apply ~run:Std.once ~fn:check1)
+      *>
+      Vertex("Sink1", new Std.sink ~run:Std.once)))
+  in
+  Lwt_main.run procs
+
 let beacon_inner_sink_graph _ =
   let check v = assert_equal v 1; Lwt.return v
   in
@@ -99,6 +128,7 @@ let graph_manual =
   [ "beacon_sink_graph" >:: beacon_sink_graph
   ; "beacon_merge_sink_graph" >:: beacon_merge_sink_graph
   ; "beacon_merge_split_sink_graph" >:: beacon_merge_split_sink_graph
+  ; "beacon_merge_split_sink_graph_with_capture_all" >:: beacon_merge_split_sink_graph_with_capture_all
   ; "beacon_inner_sink_graph" >:: beacon_inner_sink_graph
   ]
 

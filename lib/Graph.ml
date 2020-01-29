@@ -100,19 +100,47 @@ module Algebra = struct
    * Infix combinator.
    *)
 
-  let ( *+> ) a b =
+  let sources (e, v) =
     let module E = Edges in
     let module V = Vertices in
-    eval a
-    |> fun (e, v) ->
+    V.filter (fun key _ -> E.filter (fun (_, l) -> String.equal key l) e |> E.is_empty) v
+    |> fun sel -> V.fold (fun k v acc -> Vertex(k, v) :: acc) sel []
+    |> List.rev
+
+  let sinks (e, v) =
+    let module E = Edges in
+    let module V = Vertices in
     V.filter (fun key _ -> E.filter (fun (l, _) -> String.equal key l) e |> E.is_empty) v
     |> fun sel -> V.fold (fun k v acc -> Vertex(k, v) :: acc) sel []
     |> List.rev
-    |> function
-    | [] -> Overlay(a, b)
-    | v0 :: [] -> Overlay(a, Connect(v0, b))
-    | v0 :: v1 :: tl ->
-      let group = List.fold_left (fun acc e -> Overlay(acc, e)) (Overlay(v0, v1)) tl in
-      Overlay(a, Connect(group, b))
+
+  let merge lst =
+    let rec merge_r = function
+      | [] -> Empty
+      | v :: [] -> v
+      | a :: b :: [] -> Overlay(b, a)
+      | a :: tl -> Overlay(merge_r tl, a)
+    in
+    List.rev lst |> merge_r
+
+  let ( +*> ) a b =
+    let sources = eval b |> sources |> merge
+    in
+    Connect(a, sources)
+    |> (fun r -> if b = sources then r else Overlay(r, b))
+
+  let ( *+> ) a b =
+    let sinks = eval a |> sinks |> merge
+    in
+    Connect(sinks, b)
+    |> (fun r -> if a = sinks then r else Overlay(a, r))
+
+  let ( */> ) a b =
+    let sources = eval b |> sources |> merge
+    and sinks = eval a |> sinks |> merge
+    in
+    Connect(sinks, sources)
+    |> (fun r -> if a = sinks then r else Overlay(a, r))
+    |> (fun r -> if b = sources then r else Overlay(r, b))
 
 end
