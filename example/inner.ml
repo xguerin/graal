@@ -4,7 +4,9 @@ open Fstream
 let beacon ~delay =
   new Std.beacon ~delay ~zero:(fun() -> 0) ~next:(fun v -> v + 1)
 
-class subgraph ~name reader writer : Types.operator = object
+class subgraph ~name reader writer = object
+  inherit Types.operator
+
   method process =
     let%graph (_, procs) =
       Vertex("Input", new Std.input ~reader)

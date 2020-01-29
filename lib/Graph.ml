@@ -107,6 +107,7 @@ module Algebra = struct
     |> fun (e, v) ->
     V.filter (fun key _ -> E.filter (fun (l, _) -> String.equal key l) e |> E.is_empty) v
     |> fun sel -> V.fold (fun k v acc -> Vertex(k, v) :: acc) sel []
+    |> List.rev
     |> function
     | [] -> Overlay(a, b)
     | v0 :: [] -> Overlay(a, Connect(v0, b))

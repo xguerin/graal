@@ -124,7 +124,7 @@ let generate_process_list ~loc (edges, vertices) =
       let sources = make_edge_argument ~loc source_edges
       and targets = make_edge_argument ~loc target_edges
       in
-      let res = [%expr [%e expr] [%e targets] [%e sources]]
+      let res = [%expr (([%e expr] [%e targets] [%e sources]) :> Fstream.Types.operator)]
       in
       res :: acc)
       vertices []

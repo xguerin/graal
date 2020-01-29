@@ -81,7 +81,9 @@ end
 module StrMap = Map.Make(String)
 module StrSet = Set.Make(String)
 
-class aggregate ~attempts reader writer : Types.operator = object
+class aggregate ~attempts reader writer = object
+  inherit Types.operator
+
   val mutable windows = StrMap.empty
 
   method process =
@@ -125,7 +127,9 @@ class aggregate ~attempts reader writer : Types.operator = object
     process_r ()
 end
 
-class suspect_find ~attempts ~seconds reader writer : Types.operator = object
+class suspect_find ~attempts ~seconds reader writer = object
+  inherit Types.operator
+
   method process =
     let%graph (_, procs) =
       Vertex("Input", new Std.input ~reader)
@@ -154,7 +158,9 @@ end
  * Utility operators.
  *)
 
-class duplicate reader (w0, w1, w2) : Types.operator = object
+class duplicate reader (w0, w1, w2) = object
+  inherit Types.operator
+
   method process =
     let rec process_r () =
       reader#read
@@ -166,7 +172,9 @@ class duplicate reader (w0, w1, w2) : Types.operator = object
     process_r ()
 end
 
-class join (r0, r1) writer : Types.operator = object(self)
+class join (r0, r1) writer = object(self)
+  inherit Types.operator
+
   val mutable window0 = new Windows.sliding ~fn:List.hd ~count:1
   val mutable window1 = new Windows.sliding ~fn:List.hd ~count:1
 
@@ -211,7 +219,9 @@ let show_suspect e =
   Logs_lwt.debug (fun m -> m "%s" (Suspect.show e))
   >>= fun () -> Lwt.return e
 
-class real_time ~writer reader _ : Types.operator = object
+class real_time ~writer reader _ = object
+  inherit Types.operator
+
   method process =
     let%graph (_, procs) =
       Vertex("Input", new Std.input ~reader)
@@ -225,7 +235,9 @@ class real_time ~writer reader _ : Types.operator = object
     procs
 end
 
-class medium_term reader _ : Types.operator = object
+class medium_term reader _ = object
+  inherit Types.operator
+
   method process =
     let%graph (_, procs) =
       Vertex("Input", new Std.input ~reader)
@@ -239,7 +251,9 @@ class medium_term reader _ : Types.operator = object
     procs
 end
 
-class long_term reader _ : Types.operator = object
+class long_term reader _ = object
+  inherit Types.operator
+
   method process =
     let%graph (_, procs) =
       Vertex("Input", new Std.input ~reader)
@@ -285,7 +299,9 @@ let format_failure LogLine.{ ts; message; _ } =
                      ; user
                      }
 
-class failures reader writer : Types.operator = object
+class failures reader writer = object
+  inherit Types.operator
+
   method process =
     let%graph (_, procs) =
       Vertex("Input", new Std.input ~reader)
@@ -324,7 +340,9 @@ let show_success e =
   Logs_lwt.debug (fun m -> m "%s" (Success.show e))
   >>= fun () -> Lwt.return e
 
-class successes reader writer : Types.operator = object
+class successes reader writer = object
+  inherit Types.operator
+
   method process =
     let%graph (_, procs) =
       Vertex("Input", new Std.input ~reader)

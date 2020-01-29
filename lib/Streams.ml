@@ -5,7 +5,9 @@ open Lwt.Infix
  *)
 
 module Unit = struct
-  class stream : [unit] Types.stream = object
+  class stream = object
+    inherit [unit] Types.stream
+
     method read = Lwt.return ()
     method write () = Lwt.return ()
   end
@@ -22,7 +24,9 @@ module Mailbox = struct
     ; mutable wake_get: 'a Lwt.u option
     }
 
-  class ['a] stream : ['a] Types.stream = object
+  class ['a] stream = object
+    inherit ['a] Types.stream
+
     val state =
       { data = None
       ; wake_put = None

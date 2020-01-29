@@ -8,7 +8,9 @@ let beacon ~delay =
 let apply_fn (label, v) =
   Logs_lwt.info (fun m -> m "[%s] %d" label v) >>= fun () -> Lwt.return v
 
-class custom (r0, r1) writer : Types.operator = object(self)
+class custom (r0, r1) writer = object(self)
+  inherit Types.operator
+
   val r0_window = new Windows.sliding ~count:5 ~fn:(List.fold_left Int.add 0)
   val r1_window = new Windows.tumbling ~count:5 ~fn:(List.fold_left Int.add 0)
 

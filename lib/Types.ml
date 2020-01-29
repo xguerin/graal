@@ -1,16 +1,16 @@
-class type ['a] reader = object
-  method read: 'a Lwt.t
+class virtual ['a] reader = object
+  method virtual read: 'a Lwt.t
 end
 
-class type ['a] writer = object
-  method write: 'a -> unit Lwt.t
+class virtual ['a] writer = object
+  method virtual write: 'a -> unit Lwt.t
 end
 
-class type ['a] stream = object
+class virtual ['a] stream = object
   inherit ['a] reader
   inherit ['a] writer
 end
 
-class type operator = object
-  method process: unit Lwt.t
+class virtual operator = object
+  method virtual process: unit Lwt.t
 end
