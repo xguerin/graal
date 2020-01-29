@@ -1,10 +1,17 @@
 open Lwt.Infix
 
 (*
+ * Runnner functions.
+ *)
+
+let forever cb () : unit Lwt.t = cb ()
+let once _ () : unit Lwt.t = Lwt.return ()
+
+(*
  * Beacon.
  *)
 
-class beacon ?(delay=1.0) ~zero ~next reader writer = object
+class beacon ?(delay=1.0) ?(run=forever) ~zero ~next reader writer = object
   inherit Types.operator
 
   val mutable state = zero ()
@@ -14,7 +21,7 @@ class beacon ?(delay=1.0) ~zero ~next reader writer = object
       reader#read
       >>= fun () -> Lwt_unix.sleep delay
       >>= fun () -> state <- next state; writer#write state
-      >>= process_r
+      >>= run process_r
     in
     process_r ()
 end
@@ -23,7 +30,7 @@ end
  * Functor and filter.
  *)
 
-class apply ~fn reader writer = object
+class apply ?(run=forever) ~fn reader writer = object
   inherit Types.operator
 
   method process =
@@ -31,20 +38,20 @@ class apply ~fn reader writer = object
       reader#read
       >>= fn
       >>= writer#write
-      >>= process_r
+      >>= run process_r
     in
     process_r ()
 end
 
 
-class filter ~fn reader writer = object
+class filter ?(run=forever) ~fn reader writer = object
   inherit Types.operator
 
   method process =
     let rec process_r () =
       reader#read
       >>= (fun v -> if (fn v) then writer#write v else Lwt.return ())
-      >>= process_r
+      >>= run process_r
     in
     process_r ()
 end
@@ -53,7 +60,7 @@ end
  * File source/sink.
  *)
 
-class file_source ~path reader writer = object
+class file_source ?(run=forever) ~path reader writer = object
   inherit Types.operator
 
   val mutable channel = None
@@ -66,13 +73,13 @@ class file_source ~path reader writer = object
         | Some(c) -> Lwt_io.read_line c >>= writer#write
         | None -> Lwt.return ()
       end
-      >>= process_r
+      >>= run process_r
     in
     Lwt_io.open_file ~mode:Lwt_io.Input path
     >>= fun c -> channel <- Some(c); process_r ()
 end
 
-class file_sink ~path reader writer = object
+class file_sink ?(run=forever) ~path reader writer = object
   inherit Types.operator
 
   val mutable channel = None
@@ -85,7 +92,7 @@ class file_sink ~path reader writer = object
         | Some(c) -> Lwt_io.write_line c v >>= writer#write
         | None -> Lwt.return ()
       end
-      >>= process_r
+      >>= run process_r
     in
     Lwt_io.open_file ~mode:Lwt_io.Output path
     >>= fun c -> channel <- Some(c); process_r ()
@@ -95,26 +102,26 @@ end
  * Subgraph input/output.
  *)
 
-class input ~reader _ writer = object
+class input ?(run=forever) ~reader _ writer = object
   inherit Types.operator
 
   method process =
     let rec process_r () =
       reader#read
       >>= writer#write
-      >>= process_r
+      >>= run process_r
     in
     process_r()
 end
 
-class output ~writer reader _ = object
+class output ?(run=forever) ~writer reader _ = object
   inherit Types.operator
 
   method process =
     let rec process_r () =
       reader#read
       >>= writer#write
-      >>= process_r
+      >>= run process_r
     in
     process_r()
 end
@@ -123,7 +130,7 @@ end
  * Merge/split.
  *)
 
-class duplicate reader (w0, w1) = object
+class duplicate ?(run=forever) reader (w0, w1) = object
   inherit Types.operator
 
   method process =
@@ -131,12 +138,12 @@ class duplicate reader (w0, w1) = object
       reader#read
       >>= fun v -> w0#write v
       >>= fun () -> w1#write v
-      >>= process_r
+      >>= run process_r
     in
     process_r ()
 end
 
-class merge (r0, r1) writer = object
+class merge ?(run=forever) (r0, r1) writer = object
   inherit Types.operator
 
   method process =
@@ -144,12 +151,12 @@ class merge (r0, r1) writer = object
       r0#read
       >>= fun v0 -> r1#read
       >>= fun v1 -> writer#write (v0, v1)
-      >>= process_r
+      >>= run process_r
     in
     process_r ()
 end
 
-class split reader (w0, w1) = object
+class split ?(run=forever) reader (w0, w1) = object
   inherit Types.operator
 
   method process =
@@ -157,7 +164,7 @@ class split reader (w0, w1) = object
       reader#read
       >>= fun (v0, v1) -> w0#write v0
       >>= fun () -> w1#write v1
-      >>= process_r
+      >>= run process_r
     in
     process_r ()
 end
@@ -166,14 +173,14 @@ end
  * Generic sink.
  *)
 
-class sink reader writer = object
+class sink ?(run=forever) reader writer = object
   inherit Types.operator
 
   method process =
     let rec process_r () =
       reader#read
       >>= fun _ -> writer#write ()
-      >>= process_r
+      >>= run process_r
     in
     process_r ()
 end
