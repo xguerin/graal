@@ -81,31 +81,31 @@ end
 module StrMap = Map.Make(String)
 module StrSet = Set.Make(String)
 
-class aggregate ~attempts reader writer = object
+class aggregate ~attempts reader writer = object(self)
   inherit Types.operator
 
   val mutable windows = StrMap.empty
 
-  method process =
-    let window_fn entries =
-      let max_ts =
-        List.fold_left (fun acc Failure.{ ts; _ } -> if ts > acc then ts else acc)
-          0.0 entries
-      in
-      let min_ts =
-        List.fold_left (fun acc Failure.{ ts; _ } -> if ts < acc then ts else acc)
-          infinity entries
-      in
-      let users =
-        List.fold_left (fun acc Failure.{ user; _ } ->
-            match user with
-            | Some(user) -> StrSet.add user acc
-            | None -> acc)
-          StrSet.empty entries
-        |> StrSet.elements
-      in
-      (max_ts, min_ts, users)
+  method private window_fn entries =
+    let max_ts =
+      List.fold_left (fun acc Failure.{ ts; _ } -> if ts > acc then ts else acc)
+        0.0 entries
     in
+    let min_ts =
+      List.fold_left (fun acc Failure.{ ts; _ } -> if ts < acc then ts else acc)
+        infinity entries
+    in
+    let users =
+      List.fold_left (fun acc Failure.{ user; _ } ->
+          match user with
+          | Some(user) -> StrSet.add user acc
+          | None -> acc)
+        StrSet.empty entries
+      |> StrSet.elements
+    in
+    (max_ts, min_ts, users)
+
+  method process =
     let rec process_r () =
       reader#read
       >>= fun (Failure.{ rhost; _ } as e) ->
@@ -113,13 +113,15 @@ class aggregate ~attempts reader writer = object
         match StrMap.find_opt rhost windows with
         | Some(w) -> Lwt.return w
         | None ->
-          let window = new Windows.tumbling ~count:attempts ~fn:window_fn in
+          let window = new Windows.tumbling ~count:attempts in
           windows <- StrMap.add rhost window windows;
           Lwt.return window
       end
-      >>= fun window -> window#write e
+      >>= fun window -> window#process e
       >>= begin function
-        | Some((max_ts, min_ts, users)) -> writer#write FailureRange.{ max_ts; min_ts; rhost; users }
+        | Some(lst) ->
+          let (max_ts, min_ts, users) = self#window_fn lst in
+          writer#write FailureRange.{ max_ts; min_ts; rhost; users }
         | None -> Lwt.return ()
       end
       >>= process_r
@@ -175,12 +177,12 @@ end
 class join (r0, r1) writer = object(self)
   inherit Types.operator
 
-  val mutable window0 = new Windows.sliding ~fn:List.hd ~count:1
-  val mutable window1 = new Windows.sliding ~fn:List.hd ~count:1
+  val mutable window0 = new Windows.sliding ~count:1
+  val mutable window1 = new Windows.sliding ~count:1
 
   method private match_r0 v =
     match window1#content, v with
-    | Success.{ ts; user } :: _, Some(Suspect.{ users; rhost; _ }) ->
+    | Success.{ ts; user } :: _, Suspect.{ users; rhost; _ } ->
       if List.exists (String.equal user) users then
         writer#write Breakin.{ ts; rhost; user }
       else
@@ -189,7 +191,7 @@ class join (r0, r1) writer = object(self)
 
   method private match_r1 v =
     match window0#content, v with
-    | Suspect.{ users; rhost; _ } :: _, Some(Success.{ ts; user }) ->
+    | Suspect.{ users; rhost; _ } :: _, Success.{ ts; user } ->
       if List.exists (String.equal user) users then
         writer#write Breakin.{ ts; rhost; user }
       else
@@ -199,13 +201,19 @@ class join (r0, r1) writer = object(self)
   method process =
     let rec process_r0 () =
       r0#read
-      >>= window0#write
-      >>= self#match_r0
+      >>= window0#process
+      >>= begin function
+        | Some(lst) -> self#match_r0 (List.hd lst)
+        | None -> Lwt.return ()
+      end
       >>= process_r0
     and process_r1 () =
       r1#read
-      >>= window1#write
-      >>= self#match_r1
+      >>= window1#process
+      >>= begin function
+        | Some(lst) -> self#match_r1 (List.hd lst)
+        | None -> Lwt.return ()
+      end
       >>= process_r1
     in
     Lwt.join [ process_r0 (); process_r1 () ]

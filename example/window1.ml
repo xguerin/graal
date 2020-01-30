@@ -11,15 +11,15 @@ let apply_fn (label, v) =
 class custom (r0, r1) writer = object(self)
   inherit Types.operator
 
-  val r0_window = new Windows.sliding ~count:5 ~fn:(List.fold_left Int.add 0)
-  val r1_window = new Windows.tumbling ~count:5 ~fn:(List.fold_left Int.add 0)
+  val r0_window = new Windows.sliding ~count:5
+  val r1_window = new Windows.tumbling ~count:5
 
   method private process_r0 =
     let rec process () =
       r0#read
-      >>= r0_window#write
+      >>= r0_window#process
       >>= begin function
-        | Some(v) -> writer#write ("r0", v)
+        | Some(v) -> writer#write ("r0", List.fold_left Int.add 0 v)
         | None -> Lwt.return ()
       end
       >>= process
@@ -29,9 +29,9 @@ class custom (r0, r1) writer = object(self)
   method private process_r1 =
     let rec process () =
       r1#read
-      >>= r1_window#write
+      >>= r1_window#process
       >>= begin function
-        | Some(v) -> writer#write ("r1", v)
+        | Some(v) -> writer#write ("r1", List.fold_left Int.add 0 v)
         | None -> Lwt.return ()
       end
       >>= process

@@ -14,3 +14,8 @@ end
 class virtual operator = object
   method virtual process: unit Lwt.t
 end
+
+class virtual ['a] window = object
+  method virtual content: 'a list
+  method virtual process: 'a -> 'a list option Lwt.t
+end

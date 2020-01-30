@@ -1,4 +1,6 @@
-class ['a, 'b] sliding ~(fn: ('a list -> 'b)) ~count = object(self)
+class ['a] sliding  ~count = object(self)
+  inherit ['a] Types.window
+
   val mutable window: 'a list = []
 
   method private slide v =
@@ -11,9 +13,9 @@ class ['a, 'b] sliding ~(fn: ('a list -> 'b)) ~count = object(self)
 
   method content = window
 
-  method write v =
+  method process v =
     if (List.length window) = count then
-      let result = Some (fn window) in
+      let result = Some window in
       window <- self#slide v;
       Lwt.return result
     else begin
@@ -22,14 +24,16 @@ class ['a, 'b] sliding ~(fn: ('a list -> 'b)) ~count = object(self)
     end
 end
 
-class ['a, 'b] tumbling ~(fn: ('a list -> 'b)) ~count = object
+class ['a] tumbling ~count = object
+  inherit ['a] Types.window
+
   val mutable window: 'a list = []
 
   method content = window
 
-  method write v =
+  method process v =
     if (List.length window) = count then
-      let result = Some (fn window) in
+      let result = Some window in
       window <- [];
       Lwt.return result
     else begin
