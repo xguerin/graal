@@ -10,7 +10,7 @@ end
 module Edges = Set.Make(EdgeKeyType)
 module Vertices = Map.Make(String)
 
-type ('a, 'b) t = Edges.t * 'b Vertices.t
+type 'a t = Edges.t * 'a Vertices.t
 let make edges vertices = (edges, vertices)
 
 (*
