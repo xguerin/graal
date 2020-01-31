@@ -104,14 +104,14 @@ module Algebra = struct
     let module E = Edges in
     let module V = Vertices in
     V.filter (fun key _ -> E.filter (fun (_, l) -> String.equal key l) e |> E.is_empty) v
-    |> fun sel -> V.fold (fun k v acc -> Vertex(k, v) :: acc) sel []
+    |> (fun sel -> V.fold (fun k v acc -> Vertex(k, v) :: acc) sel [])
     |> List.rev
 
   let sinks (e, v) =
     let module E = Edges in
     let module V = Vertices in
     V.filter (fun key _ -> E.filter (fun (l, _) -> String.equal key l) e |> E.is_empty) v
-    |> fun sel -> V.fold (fun k v acc -> Vertex(k, v) :: acc) sel []
+    |> (fun sel -> V.fold (fun k v acc -> Vertex(k, v) :: acc) sel [])
     |> List.rev
 
   let merge lst =

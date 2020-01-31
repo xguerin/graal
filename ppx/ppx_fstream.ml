@@ -41,20 +41,6 @@ let to_list ~loc v =
  * Algebra parser and converter.
  *)
 
-let combine e0 e1 =
-  let module E = Edges in
-  let module V = Vertices in
-  eval e0
-  |> fun (e, v) ->
-  V.filter (fun key _ -> E.filter (fun (l, _) -> String.equal key l) e |> E.is_empty) v
-  |> fun sel -> V.fold (fun k v acc -> Vertex(k, v) :: acc) sel []
-  |> function
-  | [] -> Overlay(e0, e1)
-  | v0 :: [] -> Overlay(e0, Connect(v0, e1))
-  | v0 :: v1 :: tl ->
-  let group = List.fold_left (fun acc e -> Overlay(acc, e)) (Overlay(v0, v1)) tl in
-  Overlay(e0, Connect(group, e1))
-
 let rec convert = function
   (* Overlay *)
   | [%expr [%e? e0] +> [%e? e1]] -> Overlay(convert e0, convert e1)
@@ -141,7 +127,7 @@ let generate_process_list ~loc (edges, vertices) =
 let generate_processes ~loc graph =
   generate_process_list ~loc graph
   |> fun expr -> [%expr List.map (fun e -> e#process) [%e expr]]
-  |> fun expr -> [%expr Lwt.join [%e expr]]
+                 |> fun expr -> [%expr Lwt.join [%e expr]]
 
 let generate expr =
   let result = convert expr |> eval
